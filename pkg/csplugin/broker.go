@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"math"
 	"os"
-	"os/exec"
-	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"text/template"
 	"time"
 
@@ -22,6 +17,7 @@ import (
 	"github.com/crowdsecurity/crowdsec/pkg/models"
 	"github.com/crowdsecurity/crowdsec/pkg/protobufs"
 	"github.com/crowdsecurity/crowdsec/pkg/types"
+	"github.com/google/uuid"
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -207,9 +203,9 @@ func (pb *PluginBroker) loadPlugins(path string) error {
 		return err
 	}
 	for _, binaryPath := range binaryPaths {
-		if err := pluginIsValid(binaryPath); err != nil {
+		/*if err := pluginIsValid(binaryPath); err != nil {
 			return err
-		}
+		}*/
 		pType, pSubtype, err := getPluginTypeAndSubtypeFromPath(binaryPath) // eg pType="notification" , pSubtype="slack"
 		if err != nil {
 			return err
@@ -252,12 +248,10 @@ func (pb *PluginBroker) loadNotificationPlugin(name string, binaryPath string) (
 	if err != nil {
 		return nil, err
 	}
-	cmd := exec.Command(binaryPath)
-	cmd.SysProcAttr, err = getProcessAtr(pb.pluginProcConfig.User, pb.pluginProcConfig.Group)
+	cmd, err := pb.CreateCmd(binaryPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "while getting process attributes")
+		return nil, err
 	}
-	cmd.SysProcAttr.Credential.NoSetGroups = true
 	pb.pluginMap[name] = &NotifierPlugin{}
 	l := log.New()
 	err = types.ConfigureLogger(l)
@@ -367,18 +361,10 @@ func pluginIsValid(path string) error {
 		return errors.Wrap(err, fmt.Sprintf("plugin at %s does not exist", path))
 	}
 
-	// check if it is owned by current user
-	currentUser, err := user.Current()
+	// check if it is owned by root
+	err = CheckOwner(details, path)
 	if err != nil {
-		return errors.Wrap(err, "while getting current user")
-	}
-	procAttr, err := getProcessAtr(currentUser.Username, currentUser.Username)
-	if err != nil {
-		return errors.Wrap(err, "while getting process attributes")
-	}
-	stat := details.Sys().(*syscall.Stat_t)
-	if stat.Uid != procAttr.Credential.Uid || stat.Gid != procAttr.Credential.Gid {
-		return fmt.Errorf("plugin at %s is not owned by %s user and group", path, currentUser.Username)
+		return err
 	}
 
 	if (int(details.Mode()) & 2) != 0 {
@@ -403,52 +389,12 @@ func listFilesAtPath(path string) ([]string, error) {
 	return filePaths, nil
 }
 
-func getPluginTypeAndSubtypeFromPath(path string) (string, string, error) {
-	pluginFileName := filepath.Base(path)
-	parts := strings.Split(pluginFileName, "-")
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("plugin name %s is invalid. Name should be like {type-name}", path)
-	}
-	return strings.Join(parts[:len(parts)-1], "-"), parts[len(parts)-1], nil
-}
-
-func getProcessAtr(username string, groupname string) (*syscall.SysProcAttr, error) {
-	u, err := user.Lookup(username)
-	if err != nil {
-		return nil, err
-	}
-	g, err := user.LookupGroup(groupname)
-	if err != nil {
-		return nil, err
-	}
-	uid, err := strconv.ParseInt(u.Uid, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	if uid < 0 && uid > math.MaxInt32 {
-		return nil, fmt.Errorf("out of bound uid")
-	}
-	gid, err := strconv.ParseInt(g.Gid, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	if gid < 0 && gid > math.MaxInt32 {
-		return nil, fmt.Errorf("out of bound gid")
-	}
-	return &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uint32(uid),
-			Gid: uint32(gid),
-		},
-	}, nil
-}
-
 func getUUID() (string, error) {
-	if d, err := os.ReadFile("/proc/sys/kernel/random/uuid"); err != nil {
+	uuidv4, err := uuid.NewRandom()
+	if err != nil {
 		return "", err
-	} else {
-		return string(d), nil
 	}
+	return uuidv4.String(), nil
 }
 
 func getHandshake() (plugin.HandshakeConfig, error) {
