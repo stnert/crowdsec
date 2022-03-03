@@ -22,13 +22,13 @@ func CheckOwner(details fs.FileInfo, path string) error {
 	if err != nil {
 		return errors.Wrap(err, "while getting current user")
 	}
-	procAttr, err := getProcessAttr(currentUser.Username, currentUser.Username)
+	currentUID, err := getUID(currentUser.Username)
 	if err != nil {
-		return errors.Wrap(err, "while getting process attributes")
+		return errors.Wrap(err, "while looking up the current uid")
 	}
 	stat := details.Sys().(*syscall.Stat_t)
-	if stat.Uid != procAttr.Credential.Uid || stat.Gid != procAttr.Credential.Gid {
-		return fmt.Errorf("plugin at %s is not owned by %s user and group", path, currentUser.Username)
+	if stat.Uid != currentUID {
+		return fmt.Errorf("plugin at %s is not owned by user '%s'", path, currentUser.Username)
 	}
 	return nil
 }

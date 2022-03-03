@@ -367,8 +367,17 @@ func pluginIsValid(path string) error {
 		return err
 	}
 
-	if (int(details.Mode()) & 2) != 0 {
+	mode := details.Mode()
+	perm := uint32(mode)
+
+	if (perm & 00002) != 0 {
 		return fmt.Errorf("plugin at %s is world writable, world writable plugins are invalid", path)
+	}
+	if (perm & 00020) != 0 {
+		return fmt.Errorf("plugin at %s is group writable, group writable plugins are invalid", path)
+	}
+	if (mode & os.ModeSetgid) != 0 {
+		return fmt.Errorf("plugin at %s has setgid permission, which is not allowed", path)
 	}
 	return nil
 }
