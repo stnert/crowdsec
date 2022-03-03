@@ -22,7 +22,7 @@ func CheckOwner(details fs.FileInfo, path string) error {
 	if err != nil {
 		return errors.Wrap(err, "while getting current user")
 	}
-	procAttr, err := getProcessAtr(currentUser.Username, currentUser.Username)
+	procAttr, err := getProcessAttr(currentUser.Username, currentUser.Username)
 	if err != nil {
 		return errors.Wrap(err, "while getting process attributes")
 	}
@@ -45,7 +45,7 @@ func CheckCredential(uid int, gid int) *syscall.SysProcAttr {
 func (pb *PluginBroker) CreateCmd(binaryPath string) (*exec.Cmd, error) {
 	var err error
 	cmd := exec.Command(binaryPath)
-	cmd.SysProcAttr, err = getProcessAtr(pb.pluginProcConfig.User, pb.pluginProcConfig.Group)
+	cmd.SysProcAttr, err = getProcessAttr(pb.pluginProcConfig.User, pb.pluginProcConfig.Group)
 	if err != nil {
 		return nil, errors.Wrap(err, "while getting process attributes")
 	}
@@ -62,7 +62,7 @@ func getPluginTypeAndSubtypeFromPath(path string) (string, string, error) {
 	return strings.Join(parts[:len(parts)-1], "-"), parts[len(parts)-1], nil
 }
 
-func getProcessAtr(username string, groupname string) (*syscall.SysProcAttr, error) {
+func getProcessAttr(username string, groupname string) (*syscall.SysProcAttr, error) {
 	u, err := user.Lookup(username)
 	if err != nil {
 		return nil, err
