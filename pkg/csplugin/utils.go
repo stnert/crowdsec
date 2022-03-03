@@ -75,14 +75,14 @@ func getProcessAttr(username string, groupname string) (*syscall.SysProcAttr, er
 	if err != nil {
 		return nil, err
 	}
-	if uid < 0 && uid > math.MaxInt32 {
+	if uid < 0 || uid > math.MaxInt32 {
 		return nil, fmt.Errorf("out of bound uid")
 	}
 	gid, err := strconv.ParseInt(g.Gid, 10, 32)
 	if err != nil {
 		return nil, err
 	}
-	if gid < 0 && gid > math.MaxInt32 {
+	if gid < 0 || gid > math.MaxInt32 {
 		return nil, fmt.Errorf("out of bound gid")
 	}
 	return &syscall.SysProcAttr{
