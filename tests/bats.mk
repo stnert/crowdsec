@@ -1,13 +1,19 @@
 TEST_DIR = $(ROOT)/tests
-LOCAL_DIR = $(TEST_DIR)/local
+LOCAL_DIR ?= $(TEST_DIR)/local
 
-BIN_DIR = $(LOCAL_DIR)/bin
-CONFIG_DIR = $(LOCAL_DIR)/etc/crowdsec
-DATA_DIR = $(LOCAL_DIR)/var/lib/crowdsec/data
+BIN_DIR ?= $(LOCAL_DIR)/bin
+CONFIG_DIR ?= $(LOCAL_DIR)/etc/crowdsec
+DATA_DIR ?= $(LOCAL_DIR)/var/lib/crowdsec/data
 LOCAL_INIT_DIR = $(TEST_DIR)/local-init
-LOG_DIR = $(LOCAL_DIR)/var/log
-PID_DIR = $(LOCAL_DIR)/var/run
-PLUGIN_DIR = $(LOCAL_DIR)/lib/crowdsec/plugins
+LOG_DIR ?= $(LOCAL_DIR)/var/log
+PID_DIR ?= $(LOCAL_DIR)/var/run
+PLUGIN_DIR ?= $(LOCAL_DIR)/lib/crowdsec/plugins
+
+ifeq ($(INIT_TYPE),systemd)
+	DAEMONIZE = true
+else
+	DAEMONIZE = false
+endif
 
 define ENV :=
 export TEST_DIR="$(TEST_DIR)"
@@ -19,6 +25,7 @@ export LOCAL_INIT_DIR="$(LOCAL_INIT_DIR)"
 export LOG_DIR="$(LOG_DIR)"
 export PID_DIR="$(PID_DIR)"
 export PLUGIN_DIR="$(PLUGIN_DIR)"
+export DAEMONIZE="$(DAEMONIZE)"
 endef
 
 bats-all: bats-clean bats-build bats-instance-data bats-test

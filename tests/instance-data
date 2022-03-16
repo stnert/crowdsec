@@ -43,36 +43,44 @@ remove_init_data() {
 }
 
 make_init_data() {
-    remove_init_data
+    # in case of testing a package we only want to save /etc/crowdsec
+    # and initialization is already done by package
+    if [ -z ${INIT_TYPE} ]; then 
+        remove_init_data
+        
+        mkdir -p "${CONFIG_DIR}/notifications"
+        
+        envsubst < "./config-templates/acquis.yaml" > "${CONFIG_DIR}/acquis.yaml"
+        envsubst < "./config-templates/config.yaml" > "${CONFIG_DIR}/config.yaml"
+        envsubst < "./config-templates/simulation.yaml" > "${CONFIG_DIR}/simulation.yaml"
+        envsubst < "./config-templates/local_api_credentials.yaml" > "${CONFIG_DIR}/local_api_credentials.yaml"
+        envsubst < "./config-templates/online_api_credentials.yaml" > "${CONFIG_DIR}/online_api_credentials.yaml"
+        envsubst < "./config-templates/profiles.yaml" > "${CONFIG_DIR}/profiles.yaml"
+        envsubst < "./config-templates/notifications/http.yaml" > "${CONFIG_DIR}/notifications/http.yaml"
+        envsubst < "./config-templates/notifications/email.yaml" > "${CONFIG_DIR}/notifications/email.yaml"
+        envsubst < "./config-templates/notifications/slack.yaml" > "${CONFIG_DIR}/notifications/slack.yaml"
+        envsubst < "./config-templates/notifications/splunk.yaml" > "${CONFIG_DIR}/notifications/splunk.yaml"
+        
+        mkdir -p "${CONFIG_DIR}/hub"
+        "${BIN_DIR}/cscli" machines add githubciXXXXXXXXXXXXXXXXXXXXXXXX --auto
+        "${BIN_DIR}/cscli" capi register
+        "${BIN_DIR}/cscli" hub update
+        "${BIN_DIR}/cscli" collections install crowdsecurity/linux
+        mkdir -p "${CONFIG_DIR}/patterns"
+        cp -ax "../config/patterns" "${CONFIG_DIR}/"
+    
+        "${TEST_DIR}/instance-crowdsec" start
+        "${BIN_DIR}/cscli" lapi status
+        "${TEST_DIR}/instance-crowdsec" stop
 
-    mkdir -p "${CONFIG_DIR}/notifications"
+        tar -C "${LOCAL_DIR}" --create --file "${LOCAL_INIT_DIR}/init-config-data.tar" "$REL_CONFIG_DIR" "$REL_DATA_DIR"
 
-    envsubst < "./config-templates/acquis.yaml" > "${CONFIG_DIR}/acquis.yaml"
-    envsubst < "./config-templates/config.yaml" > "${CONFIG_DIR}/config.yaml"
-    envsubst < "./config-templates/simulation.yaml" > "${CONFIG_DIR}/simulation.yaml"
-    envsubst < "./config-templates/local_api_credentials.yaml" > "${CONFIG_DIR}/local_api_credentials.yaml"
-    envsubst < "./config-templates/online_api_credentials.yaml" > "${CONFIG_DIR}/online_api_credentials.yaml"
-    envsubst < "./config-templates/profiles.yaml" > "${CONFIG_DIR}/profiles.yaml"
-    envsubst < "./config-templates/notifications/http.yaml" > "${CONFIG_DIR}/notifications/http.yaml"
-    envsubst < "./config-templates/notifications/email.yaml" > "${CONFIG_DIR}/notifications/email.yaml"
-    envsubst < "./config-templates/notifications/slack.yaml" > "${CONFIG_DIR}/notifications/slack.yaml"
-    envsubst < "./config-templates/notifications/splunk.yaml" > "${CONFIG_DIR}/notifications/splunk.yaml"
-
-    mkdir -p "${CONFIG_DIR}/hub"
-    "${BIN_DIR}/cscli" machines add githubciXXXXXXXXXXXXXXXXXXXXXXXX --auto
-    "${BIN_DIR}/cscli" capi register
-    "${BIN_DIR}/cscli" hub update
-    "${BIN_DIR}/cscli" collections install crowdsecurity/linux
-    mkdir -p "${CONFIG_DIR}/patterns"
-    cp -ax "../config/patterns" "${CONFIG_DIR}/"
-
-    "${TEST_DIR}/instance-crowdsec" start
-    "${BIN_DIR}/cscli" lapi status
-    "${TEST_DIR}/instance-crowdsec" stop
-
-    tar -C "${LOCAL_DIR}" --create --file "${LOCAL_INIT_DIR}/init-config-data.tar" "$REL_CONFIG_DIR" "$REL_DATA_DIR"
-
-    remove_init_data
+        remove_init_data
+    else
+        mkdir -p ${LOCAL_INIT_DIR}
+        "${TEST_DIR}/instance-crowdsec" stop
+        tar -C "/" --create --file "${LOCAL_INIT_DIR}/init-config-data.tar" "$CONFIG_DIR" "$DATA_DIR"
+    fi
 }
 
 load_init_data() {
@@ -81,8 +89,11 @@ load_init_data() {
     fi
 
     remove_init_data
-
-    tar -C "${LOCAL_DIR}" --extract --file "${LOCAL_INIT_DIR}/init-config-data.tar"
+    if [ -z ${INIT_TYPE} ]; then 
+        tar -C "${LOCAL_DIR}" --extract --file "${LOCAL_INIT_DIR}/init-config-data.tar"
+    else
+        tar -C "/" --extract --file "${LOCAL_INIT_DIR}/init-config-data.tar"
+    fi
 }
 
 
@@ -90,7 +101,18 @@ load_init_data() {
 
 [ $# -lt 1 ] && about
 
-./assert-crowdsec-not-running
+if [ -z ${INIT_TYPE} ]; then
+    ./assert-crowdsec-not-running
+else
+    case "$INIT_TYPE" in
+        systemd)
+            systemctl stop crowdsec
+            ;;
+        *)
+            echo "for now only systemd is supported as INIT_TYPE"
+            ;;
+    esac;
+fi
 
 case "$1" in
     make)

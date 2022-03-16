@@ -7,6 +7,10 @@ die() {
     exit 1
 }
 
+if [ ! -z ${INIT_TYPE} ] ; then
+    SYSTEM=${INIT_TYPE}
+fi
+
 # Simplified dudeist daemonizer. Don't care about lock files, separate
 # stdout/stderr and fancy stuff. #YOLO
 
@@ -16,6 +20,9 @@ case "${SYSTEM,,}" in
         ;;
     freebsd)
         daemon -p "${DAEMON_PID}" -o "${OUT_FILE}" "$@"
+        ;;
+    systemd)
+        systemctl start crowdsec || SYSTEMD_RUNNING=true
         ;;
     *)
         die "unsupported system: $SYSTEM"

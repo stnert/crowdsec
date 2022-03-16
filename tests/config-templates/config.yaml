@@ -1,5 +1,5 @@
 common:
-  daemonize: false
+  daemonize: ${DAEMONIZE}
   # pid_dir: /var/run/
   log_media: file
   log_level: info

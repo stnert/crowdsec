@@ -30,7 +30,7 @@ check_requirements() {
     SYSTEM=$(uname -s)
     case "${SYSTEM,,}" in
         linux)
-            if ! command -v daemonize >/dev/null; then
+            if ! command -v daemonize >/dev/null && ${INIT_TYPE} != "systemd"; then
                 die "missing required program 'daemonize' (package 'daemonize')"
             fi
             ;;
