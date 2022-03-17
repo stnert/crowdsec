@@ -27,7 +27,7 @@ check_mysql_client() {
 
 send_mysql() {
     if [ "$#" -lt 1 ]; then
-        die "missing requriement argument to send the mysql database"
+        die "missing requirement argument to send the mysql database"
     fi
 
     /bin/echo "$1" | mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} --port=${MYSQL_PORT} -p${MYSQL_PASSWORD}
@@ -47,6 +47,21 @@ setup_database() {
 cleanup_database() {
     send_mysql "DROP DATABASE IF EXISTS crowdsec;"
     send_mysql "DROP USER IF EXISTS crowdsec;"
+}
+
+backup_database() {
+    if [ "$#" -lt 1 ]; then
+        die "missing file to backup database to"
+    fi
+    mysqldump -h${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_PASSWORD} crowdsec > $2
+}
+
+restore_database() {
+    if [ -f $2 ]; then
+        mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} --port=${MYSQL_PORT} -p${MYSQL_PASSWORD} < ${LOCAL_DIR}/backup.mysql.sql
+    else
+        die "$2 doesn\'t exist"
+    fi
 }
 
 setup_configuration() {
@@ -71,6 +86,12 @@ case "$1" in
         ;;
     configure)
         setup_configuration
+        ;;
+    backup)
+        backup_database $2
+        ;;
+    restore)
+        restore_database $2
         ;;
     *)
         about
