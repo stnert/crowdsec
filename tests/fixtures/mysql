@@ -12,6 +12,8 @@ MYSQL_HOST=${MYSQL_HOST:-127.0.0.1}
 MYSQL_PORT=${MYSQL_PORT:-3306}
 MYSQL_PASSWORD=${MYSQL_PASSWORD:-password}
 MYSQL_USER=${MYSQL_USER:-root}
+CONFIG_DIR=${CONFIG_DIR:-"/etc/crowdsec/"} # this is scoped to this file
+CONFIG_FILE=${CONFIG_DIR:-"config.yaml"}
 
 about() {
     die "usage: $0 [make | load | clean]"
@@ -48,13 +50,15 @@ cleanup_database() {
 }
 
 setup_configuration() {
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.type mysql
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.user crowdsec
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.password crowdsec
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.db_name crowdsec  
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.host ${MYSQL_HOST}
-    yq w -i "${CONFIG_DIR}/config.yaml" db_config.port ${MYSQL_PORT}
-    yq 'del(.db_config.db_path)' -i "${CONFIG_DIR}/config.yaml" 
+    MYSQL_PORT=${MYSQL_PORT} MYSQL_HOST=${MYSQL_HOST} yq '
+        .db_config.type="mysql"|
+        .db_config.user="crowdsec" |
+        .db_config.password="crowdsec" |
+        .db_config.db_name="crowdsec"  |
+        .db_config.host=strenv(MYSQL_HOST) |
+        .db_config.port=env(MYSQL_PORT) |
+        del(.db_config.db_path) 
+    ' -i "${CONFIG_DIR}/config.yaml" 
 }
 
 
