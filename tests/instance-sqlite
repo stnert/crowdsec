@@ -28,7 +28,10 @@ cd "${THIS_DIR}"
 
 ./assert-crowdsec-not-running
 
+<<<<<<< HEAD
 DATA_DIR=$(yq <"${CONFIG_YAML}" '.config_paths.data_dir')
+=======
+>>>>>>> c7087fb3 (manage db backup/restore separately)
 DB_FILE="${DATA_DIR}/crowdsec.db"
 
 case "$1" in
