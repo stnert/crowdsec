@@ -40,6 +40,13 @@ export CONFIG_DIR
 
 remove_init_data() {
     rm -rf -- "${LOCAL_DIR:?}/${REL_CONFIG_DIR}"/* "${LOCAL_DIR:?}/${REL_DATA_DIR:?}"/*
+
+    case "$DB_BACKEND" in
+        mysql)
+            ./fixtures/mysql cleanup
+        ;;
+    esac;
+
 }
 
 config_generate() {
@@ -95,10 +102,21 @@ make_init_data() {
     "${CSCLI}" lapi status
     "${TEST_DIR}/instance-crowdsec" stop
 
-    # we deal with the database separately (might be mysql, postgres)
 
+<<<<<<< HEAD
     mkdir -p "${LOCAL_INIT_DIR}"
 
+=======
+
+    case "$DB_BACKEND" in
+        mysql)
+            ./fixtures/mysql configure
+            ./fixtures/mysql setup
+        ;;
+    esac;
+
+    # we deal with the database separately (might be mysql, postgres)
+>>>>>>> 5f779f88 (update)
     ./instance-db backup "${LOCAL_INIT_DIR}/database"
 
     tar -C "${LOCAL_DIR}" --create \
@@ -114,7 +132,7 @@ load_init_data() {
     fi
 
     remove_init_data
-
+    
     tar -C "${LOCAL_DIR}" --extract --file "${LOCAL_INIT_DIR}/init-config-data.tar"
     ./instance-db restore "${LOCAL_INIT_DIR}/database"
 }

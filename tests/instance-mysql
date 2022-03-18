@@ -28,19 +28,19 @@ cd "${THIS_DIR}"
 ./assert-crowdsec-not-running
 
 case "$1" in
-     backup)
-         [ $# -lt 2 ] && about
-         backup_file="$2"
-         fixtures/mysql backup $backup_file
-         ;;
-     restore)
-         [ $# -lt 2 ] && about
-         backup_file="$2"
-         [ -f "$backup_file" ] || die "missing file $backup_file"
-         fixtures/mysql restore $backup_file
-         ;;
-     *) 
-         about
-         ;;
+    backup)
+        [ $# -lt 2 ] && about
+        backup_file="$2"
+        fixtures/mysql backup $backup_file
+        ;;
+    restore)
+        [ $# -lt 2 ] && about
+        backup_file="$2"
+        [ -f "$backup_file" ] || die "missing file $backup_file"
+        fixtures/mysql restore $backup_file
+        ;;
+    *) 
+        about
+        ;;
 esac;
 
