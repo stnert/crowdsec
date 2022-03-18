@@ -38,8 +38,8 @@ requirements() {
 }
 
 setup_database() {
-    send_mysql "CREATE DATABASE crowdsec;"
-    send_mysql "CREATE USER 'crowdsec' IDENTIFIED BY 'crowdsec';"
+    send_mysql "CREATE DATABASE IF NOT EXISTS crowdsec;"
+    send_mysql "CREATE USER IF NOT EXISTS 'crowdsec' IDENTIFIED BY 'crowdsec';"
     send_mysql "GRANT ALL PRIVILEGES ON crowdsec.* TO 'crowdsec';"
 }
 
@@ -53,12 +53,16 @@ backup_database() {
     if [ "$#" -lt 1 ]; then
         die "missing file to backup database to"
     fi
-    mysqldump -h${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_PASSWORD} crowdsec > $2
+    mysqldump -h${MYSQL_HOST} -u${MYSQL_USER} -p${MYSQL_PASSWORD} crowdsec > $1
 }
 
 restore_database() {
-    if [ -f $2 ]; then
-        mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} --port=${MYSQL_PORT} -p${MYSQL_PASSWORD} < ${LOCAL_DIR}/backup.mysql.sql
+    if [ "$#" -lt 1 ]; then
+        die "missing file to restore database to"
+    fi
+    
+    if [ -f $1 ]; then
+        mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} --port=${MYSQL_PORT} -p${MYSQL_PASSWORD} < $1
     else
         die "$2 doesn\'t exist"
     fi
@@ -88,9 +92,15 @@ case "$1" in
         setup_configuration
         ;;
     backup)
+        if [ "$#" -lt 2 ]; then
+            die "missing file to restore backup to"
+        fi
         backup_database $2
         ;;
     restore)
+        if [ "$#" -lt 2 ]; then
+            die "missing file to restore restore to"
+        fi
         restore_database $2
         ;;
     *)
